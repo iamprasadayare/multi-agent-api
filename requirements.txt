@@ -1,0 +1,6 @@
+fastapi
+uvicorn
+google-cloud-firestore
+google-cloud-aiplatform
+google-adk==1.14.0
+mcp>=1.0.0
