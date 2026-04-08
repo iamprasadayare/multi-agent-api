@@ -15,3 +15,15 @@ def add_note(note: str) -> str:
     doc_ref = db.collection("notes").document()
     doc_ref.set({"content": note})
     return f"Note added with ID: {doc_ref.id}"
+
+def mark_task_complete(task_id: str) -> str:
+    """Marks a task as completed in Firestore."""
+    doc_ref = db.collection("tasks").document(task_id)
+    doc_ref.update({"status": "completed"})
+    return f"Task {task_id} marked as completed."
+
+def delete_task(task_id: str) -> str:
+    """Deletes a task from Firestore."""
+    doc_ref = db.collection("tasks").document(task_id)
+    doc_ref.delete()
+    return f"Task {task_id} deleted."

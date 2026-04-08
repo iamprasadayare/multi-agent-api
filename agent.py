@@ -1,6 +1,6 @@
 import vertexai
 from vertexai.generative_models import GenerativeModel, Tool, FunctionDeclaration, Part
-from database import add_task, get_tasks, add_note
+from database import add_task, get_tasks, add_note, mark_task_complete, delete_task
 
 vertexai.init()
 
@@ -22,7 +22,19 @@ add_note_func = FunctionDeclaration(
     parameters={"type": "object", "properties": {"content": {"type": "string"}}, "required": ["content"]}
 )
 
-task_tools = Tool(function_declarations=[add_task_func, get_tasks_func, add_note_func])
+mark_task_complete_func = FunctionDeclaration(
+    name="mark_task_complete",
+    description="Marks a specific task as completed. Provide the 'task_id'.",
+    parameters={"type": "object", "properties": {"task_id": {"type": "string"}}, "required": ["task_id"]}
+)
+
+delete_task_func = FunctionDeclaration(
+    name="delete_task",
+    description="Deletes a specific task. Provide the 'task_id'.",
+    parameters={"type": "object", "properties": {"task_id": {"type": "string"}}, "required": ["task_id"]}
+)
+
+task_tools = Tool(function_declarations=[add_task_func, get_tasks_func, add_note_func, mark_task_complete_func, delete_task_func])
 
 model = GenerativeModel(
     "gemini-2.5-flash",
@@ -44,6 +56,10 @@ async def process_request(user_input: str) -> str:
                 result = get_tasks()
             elif fc.name == "add_note": 
                 result = add_note(fc.args.get("content", ""))
+            elif fc.name == "mark_task_complete":
+                result = mark_task_complete(fc.args.get("task_id", ""))
+            elif fc.name == "delete_task":
+                result = delete_task(fc.args.get("task_id", ""))
             else: 
                 result = "Unknown function"
             
