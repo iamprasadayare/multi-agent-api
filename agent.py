@@ -39,7 +39,7 @@ task_tools = Tool(function_declarations=[add_task_func, get_tasks_func, add_note
 model = GenerativeModel(
     "gemini-2.5-flash",
     tools=[task_tools],
-    system_instruction="You are an AI assistant managing the user's tasks and notes. Use the provided tools appropriately."
+    system_instruction="You are a helpful AI assistant managing tasks. CRITICAL: NEVER display the raw task IDs to the user. Keep them completely hidden internally. If asked to delete multiple tasks, first retrieve the tasks, then call delete_task individually for EACH task ID that matches the user's request."
 )
 chat_session = model.start_chat()
 
@@ -50,18 +50,29 @@ async def process_request(user_input: str) -> str:
     while response.candidates and response.candidates[0].function_calls:
         function_responses = []
         for fc in response.candidates[0].function_calls:
-            if fc.name == "add_task": 
-                result = add_task(fc.args.get("description", ""))
-            elif fc.name == "get_tasks": 
-                result = get_tasks()
-            elif fc.name == "add_note": 
-                result = add_note(fc.args.get("content", ""))
-            elif fc.name == "mark_task_complete":
-                result = mark_task_complete(fc.args.get("task_id", ""))
-            elif fc.name == "delete_task":
-                result = delete_task(fc.args.get("task_id", ""))
-            else: 
-                result = "Unknown function"
+            try:
+                if fc.name == "add_task": 
+                    result = add_task(fc.args.get("description", ""))
+                elif fc.name == "get_tasks": 
+                    result = get_tasks()
+                elif fc.name == "add_note": 
+                    result = add_note(fc.args.get("content", ""))
+                elif fc.name == "mark_task_complete":
+                    # ensure task_id isn't somehow empty
+                    task_id = fc.args.get("task_id", "")
+                    if not task_id: 
+                        raise ValueError("Missing task_id.")
+                    result = mark_task_complete(task_id)
+                elif fc.name == "delete_task":
+                    task_id = fc.args.get("task_id", "")
+                    if not task_id: 
+                        raise ValueError("Missing task_id.")
+                    result = delete_task(task_id)
+                else: 
+                    result = "Unknown function"
+            except Exception as e:
+                # If python throws an error (e.g invalid task ID), pass it back to the AI calmly!
+                result = f"Error executing tool: {str(e)}"
             
             function_responses.append(
                 Part.from_function_response(name=fc.name, response={"result": str(result)})
